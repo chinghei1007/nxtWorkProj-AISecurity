@@ -77,7 +77,7 @@ All application endpoints use /api and return errors as:
 ~~~
 
 - Authentication/account: /api/auth/login, /api/auth/logout, /api/auth/me, /api/account, /api/account/change-password
-- Scans: /api/scans, /api/scans/:id
+- Scans: /api/scans, /api/scans/:id, /api/scans/:id/export
 - Models and credentials: /api/models, /api/model-preference, /api/credentials, /api/credentials/:id/models
 - Administration: /api/admin/users, /api/admin/users/:id, /api/admin/users/:id/reset-password
 
@@ -108,7 +108,9 @@ npm run verify:provider
 
 - Submitted source is capped at 50,000 characters, never executed, and excluded from request logs.
 - Obvious prose is rejected before a provider request.
-- Successful history records include a SHA-256 hash, a 160-character preview, model metadata, summary, and findings—not the full source.
+- Successful history records include a SHA-256 hash, a 160-character preview, model metadata, summary, rich remediation findings, and bounded affected snippets—not the full source.
+- Findings include fixed-scale story-point estimates, safe Markdown instructions, and optional read-only replacement code. Legacy findings are normalized when read.
+- The report viewer supports severity and effort filters, deterministic sorting, history expansion, and versioned JSON copy/download. Exports always contain the complete canonical fix queue, independent of UI filters.
 - User queries are ownership-scoped. Administrator routes enforce roles and preserve at least one active administrator.
 - Session tokens are random, stored only as SHA-256 hashes, and rotated after password changes.
 - Provider responses are schema-validated and receive at most one repair attempt.

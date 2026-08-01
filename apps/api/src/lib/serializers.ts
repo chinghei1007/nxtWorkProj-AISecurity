@@ -1,5 +1,5 @@
 import type { ProviderCredential, Scan, User } from "@prisma/client";
-import { findingSchema, type Finding } from "@secure-scan/contracts";
+import { normalizeFindings } from "./findings.js";
 
 export function serializeUser(user: User) {
   return {
@@ -25,10 +25,6 @@ export function serializeCredential(credential: ProviderCredential) {
 }
 
 export function serializeScan(scan: Scan) {
-  const findings = Array.isArray(scan.findings)
-    ? scan.findings.map((finding) => findingSchema.parse(finding))
-    : ([] as Finding[]);
-
   return {
     id: scan.id,
     title: scan.title,
@@ -37,7 +33,7 @@ export function serializeScan(scan: Scan) {
     provider: scan.provider,
     model: scan.model,
     summary: scan.summary,
-    findings,
+    findings: normalizeFindings(scan.findings),
     createdAt: scan.createdAt.toISOString(),
     updatedAt: scan.updatedAt.toISOString(),
   };

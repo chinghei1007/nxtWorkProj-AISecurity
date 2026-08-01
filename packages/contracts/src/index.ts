@@ -3,8 +3,15 @@ import { z } from "zod";
 export const roleSchema = z.enum(["ADMIN", "USER"]);
 export const userStatusSchema = z.enum(["ACTIVE", "DISABLED"]);
 export const severitySchema = z.enum(["critical", "high", "medium", "low", "info"]);
+export const storyPointsSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(5),
+  z.literal(8),
+]);
 
-export const findingSchema = z.object({
+const baseFindingSchema = z.object({
   severity: severitySchema,
   title: z.string().min(1).max(160),
   lineStart: z.number().int().positive().optional(),
@@ -13,9 +20,39 @@ export const findingSchema = z.object({
   remediation: z.string().min(1).max(4_000),
 });
 
+export const evidenceSnippetSchema = z.object({
+  code: z.string().max(2_400),
+  startLine: z.number().int().positive(),
+  endLine: z.number().int().positive(),
+  highlightStartLine: z.number().int().positive(),
+  highlightEndLine: z.number().int().positive(),
+});
+
+export const providerFindingSchema = baseFindingSchema.extend({
+  storyPoints: storyPointsSchema,
+  instructionsMarkdown: z.string().min(1).max(12_000),
+  suggestedCode: z.string().max(12_000).optional(),
+});
+
+export const storedFindingSchema = baseFindingSchema.extend({
+  storyPoints: storyPointsSchema.optional(),
+  instructionsMarkdown: z.string().min(1).max(12_000).optional(),
+  suggestedCode: z.string().max(12_000).optional(),
+  evidence: evidenceSnippetSchema.optional(),
+});
+
+export const findingSchema = baseFindingSchema.extend({
+  storyPoints: storyPointsSchema,
+  instructionsMarkdown: z.string().min(1).max(12_000),
+  suggestedCode: z.string().max(12_000).optional(),
+  evidence: evidenceSnippetSchema.optional(),
+  priority: z.number().int().positive(),
+  originalIndex: z.number().int().nonnegative(),
+});
+
 export const scanResultSchema = z.object({
   summary: z.string().min(1).max(4_000),
-  findings: z.array(findingSchema).max(100),
+  findings: z.array(providerFindingSchema).max(100),
 });
 
 export const userSchema = z.object({
@@ -119,6 +156,40 @@ export const scanSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const exportFindingSchema = z.object({
+  rank: z.number().int().positive(),
+  severity: severitySchema,
+  storyPoints: storyPointsSchema,
+  title: z.string(),
+  location: z.object({
+    lineStart: z.number().int().positive(),
+    lineEnd: z.number().int().positive(),
+  }).nullable(),
+  evidence: evidenceSnippetSchema.nullable(),
+  suggestedCode: z.string().nullable(),
+  explanation: z.string(),
+  remediationSummary: z.string(),
+  instructionsMarkdown: z.string(),
+});
+
+export const scanExportSchema = z.object({
+  schemaVersion: z.literal("1.0"),
+  exportedAt: z.string(),
+  scan: z.object({
+    id: z.string(),
+    title: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    language: z.string(),
+    sourceHash: z.string(),
+    codePreview: z.string(),
+    provider: modelProviderSchema,
+    model: z.string(),
+    summary: z.string(),
+  }),
+  fixQueue: z.array(exportFindingSchema),
+});
+
 export const errorResponseSchema = z.object({
   error: z.object({
     code: z.string(),
@@ -129,10 +200,15 @@ export const errorResponseSchema = z.object({
 
 export type Role = z.infer<typeof roleSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
+export type StoryPoints = z.infer<typeof storyPointsSchema>;
 export type Finding = z.infer<typeof findingSchema>;
+export type StoredFinding = z.infer<typeof storedFindingSchema>;
+export type ProviderFinding = z.infer<typeof providerFindingSchema>;
+export type EvidenceSnippet = z.infer<typeof evidenceSnippetSchema>;
 export type ScanResult = z.infer<typeof scanResultSchema>;
 export type User = z.infer<typeof userSchema>;
 export type SafeModel = z.infer<typeof safeModelSchema>;
 export type Credential = z.infer<typeof credentialSchema>;
 export type Scan = z.infer<typeof scanSchema>;
+export type ScanExport = z.infer<typeof scanExportSchema>;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;

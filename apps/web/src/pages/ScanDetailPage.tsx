@@ -1,22 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Braces, FileText, Pencil, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { InlineAlert } from "../components/InlineAlert";
+import { JsonReportViewer } from "../components/JsonReportViewer";
 import { ScanResults } from "../components/ScanResults";
 import { api, messageFrom } from "../lib/api";
 import { formatDate } from "../lib/format";
-import type { ScanPayload } from "../types";
+import type { ScanExportPayload, ScanPayload } from "../types";
 
 export function ScanDetailPage() {
   const { id = "" } = useParams();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
+  const [activeTab, setActiveTab] = useState<"report" | "json">("report");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const scan = useQuery({
     queryKey: ["scan", id],
     queryFn: () => api<ScanPayload>("/api/scans/" + id),
+  });
+  const exportedReport = useQuery({
+    queryKey: ["scan-export", id],
+    queryFn: () => api<ScanExportPayload>(`/api/scans/${id}/export`),
+    enabled: activeTab === "json" && Boolean(id),
   });
   useEffect(() => {
     if (scan.data) setTitle(scan.data.scan.title);
@@ -88,11 +95,41 @@ export function ScanDetailPage() {
       {(rename.error || remove.error) && (
         <div className="mb-4"><InlineAlert>{messageFrom(rename.error ?? remove.error)}</InlineAlert></div>
       )}
-      <ScanResults scan={scan.data.scan} />
-      <div className="mt-4 card p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Stored source preview</p>
-        <code className="mt-2 block break-words text-sm leading-6 text-slate-600">{scan.data.scan.codePreview}</code>
+      <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Scan report view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "report"}
+          className={"flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition " + (activeTab === "report" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900")}
+          onClick={() => setActiveTab("report")}
+        >
+          <FileText className="h-4 w-4" /> Report
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "json"}
+          className={"flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition " + (activeTab === "json" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900")}
+          onClick={() => setActiveTab("json")}
+        >
+          <Braces className="h-4 w-4" /> JSON
+        </button>
       </div>
+      {activeTab === "report" ? (
+        <>
+          <ScanResults scan={scan.data.scan} />
+          <div className="mt-4 card p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Stored source preview</p>
+            <code className="mt-2 block break-words text-sm leading-6 text-slate-600">{scan.data.scan.codePreview}</code>
+          </div>
+        </>
+      ) : exportedReport.isLoading ? (
+        <div className="card h-72 animate-pulse bg-white" />
+      ) : exportedReport.error || !exportedReport.data ? (
+        <InlineAlert>{messageFrom(exportedReport.error)}</InlineAlert>
+      ) : (
+        <JsonReportViewer report={exportedReport.data} />
+      )}
     </div>
   );
 }

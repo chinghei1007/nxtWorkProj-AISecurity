@@ -9,12 +9,15 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { detectLanguage, looksLikeCode } from "../lib/code-gate.js";
 import { AppError } from "../lib/errors.js";
+import { enrichFindingsWithEvidence } from "../lib/findings.js";
+import { buildScanExport, reportFilename } from "../lib/report-export.js";
 import { serializeScan } from "../lib/serializers.js";
 import { requireReady } from "../plugins/auth.js";
 import { resolveModelSelection } from "../services/model-selection.js";
 import { auditWithGemini, auditWithOpenAICompatible } from "../services/providers.js";
 
 const paramsSchema = z.object({ id: z.string().min(1) });
+const exportQuerySchema = z.object({ download: z.literal("1").optional() });
 
 async function ownedScan(userId: string, id: string) {
   const scan = await prisma.scan.findFirst({ where: { id, userId } });
@@ -49,6 +52,7 @@ export async function scanRoutes(app: FastifyInstance) {
           });
 
       const language = detectLanguage(input.source);
+      const findings = enrichFindingsWithEvidence(result.findings, input.source);
       const scan = await prisma.scan.create({
         data: {
           userId: request.currentUser!.id,
@@ -60,7 +64,7 @@ export async function scanRoutes(app: FastifyInstance) {
           profileId: selection.source === "SERVER" ? selection.profileId : null,
           model: selection.model,
           summary: result.summary,
-          findings: result.findings as Prisma.InputJsonValue,
+          findings: findings as Prisma.InputJsonValue,
         },
       });
       return reply.status(201).send({ scan: serializeScan(scan) });
@@ -73,6 +77,19 @@ export async function scanRoutes(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
     });
     return { scans: scans.map(serializeScan) };
+  });
+
+  app.get("/api/scans/:id/export", async (request, reply) => {
+    const { id } = paramsSchema.parse(request.params);
+    const { download } = exportQuerySchema.parse(request.query);
+    const scan = await ownedScan(request.currentUser!.id, id);
+    if (download === "1") {
+      reply.header(
+        "Content-Disposition",
+        `attachment; filename="${reportFilename(scan.title, scan.id)}"`,
+      );
+    }
+    return reply.type("application/json; charset=utf-8").send(buildScanExport(scan));
   });
 
   app.get("/api/scans/:id", async (request) => {

@@ -21,6 +21,10 @@ describe("ScanResults", () => {
               lineStart: 3,
               explanation: "The token is accepted from an untrusted query parameter.",
               remediation: "Read the token from an authenticated, validated session.",
+              storyPoints: 2,
+              instructionsMarkdown: "1. Read the token from the **session**.\n2. Validate it.",
+              priority: 1,
+              originalIndex: 0,
             },
           ],
           createdAt: new Date(0).toISOString(),
@@ -30,7 +34,9 @@ describe("ScanResults", () => {
     );
 
     expect(screen.getByText("Untrusted token input")).toBeInTheDocument();
-    expect(screen.getByText("Recommended fix")).toBeInTheDocument();
+    expect(screen.getByText("Remediation summary")).toBeInTheDocument();
     expect(screen.getByText(/authenticated, validated session/)).toBeInTheDocument();
+    expect(screen.getByText("session")).toBeInTheDocument();
+    expect(screen.getByText("Source snippet unavailable")).toBeInTheDocument();
   });
 });

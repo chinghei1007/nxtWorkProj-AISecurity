@@ -10,6 +10,9 @@ const valid = JSON.stringify({
       lineStart: 4,
       explanation: "Untrusted input is concatenated into a query.",
       remediation: "Use a parameterized query.",
+      storyPoints: 2,
+      instructionsMarkdown: "1. Replace concatenation.\n2. Bind the value as a parameter.",
+      suggestedCode: "db.query('SELECT * FROM users WHERE id = ?', [id])",
     },
   ],
 });
@@ -36,5 +39,40 @@ describe("provider result validation", () => {
     await expect(parseProviderResultWithRepair(generate, "const value = 1;"))
       .rejects.toMatchObject({ code: "INVALID_PROVIDER_RESPONSE", statusCode: 502 });
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects effort outside the fixed story-point scale", async () => {
+    const invalid = JSON.stringify({
+      summary: "Invalid estimate.",
+      findings: [{
+        severity: "low",
+        title: "Example",
+        explanation: "Example explanation.",
+        remediation: "Example remediation.",
+        storyPoints: 4,
+        instructionsMarkdown: "Fix it.",
+      }],
+    });
+    const generate = vi.fn().mockResolvedValue(invalid);
+    await expect(parseProviderResultWithRepair(generate, "const value = 1;"))
+      .rejects.toMatchObject({ code: "INVALID_PROVIDER_RESPONSE" });
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("enforces the Markdown size limit", async () => {
+    const oversized = JSON.stringify({
+      summary: "Oversized guidance.",
+      findings: [{
+        severity: "low",
+        title: "Example",
+        explanation: "Example explanation.",
+        remediation: "Example remediation.",
+        storyPoints: 1,
+        instructionsMarkdown: "x".repeat(12_001),
+      }],
+    });
+    const generate = vi.fn().mockResolvedValue(oversized);
+    await expect(parseProviderResultWithRepair(generate, "const value = 1;"))
+      .rejects.toMatchObject({ code: "INVALID_PROVIDER_RESPONSE" });
   });
 });
