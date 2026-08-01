@@ -11,6 +11,7 @@ import { AppError } from "../lib/errors.js";
 import { serializeCredential } from "../lib/serializers.js";
 import { requireReady } from "../plugins/auth.js";
 import { listSafeModels } from "../services/model-selection.js";
+import { canUseServerProfile } from "../services/model-selection.js";
 import { listGeminiModels } from "../services/providers.js";
 
 const paramsSchema = z.object({ id: z.string().min(1) });
@@ -95,6 +96,9 @@ export async function modelRoutes(app: FastifyInstance) {
     if (input.source === "SERVER") {
       const profile = config.modelProfiles.find((candidate) => candidate.id === input.profileId);
       if (!profile) throw new AppError(404, "MODEL_NOT_FOUND", "Model profile not found.");
+      if (!canUseServerProfile(request.currentUser!.accessTier, profile)) {
+        throw new AppError(403, "MODEL_ACCESS_DENIED", "Full Demo access is required for that shared model.");
+      }
       if (!process.env[profile.apiKeyEnv]) {
         throw new AppError(503, "MODEL_NOT_CONFIGURED", "That model has no configured API key.");
       }

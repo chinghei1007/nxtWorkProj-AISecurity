@@ -2,11 +2,19 @@ import type { ProviderCredential, Scan, User } from "@prisma/client";
 import { normalizeFindings } from "./findings.js";
 
 export function serializeUser(user: User) {
+  const effectiveStatus = user.status === "DISABLED"
+    ? "DISABLED" as const
+    : user.expiresAt && user.expiresAt <= new Date()
+      ? "EXPIRED" as const
+      : "ACTIVE" as const;
   return {
     id: user.id,
     username: user.username,
     role: user.role,
     status: user.status,
+    accessTier: user.accessTier,
+    expiresAt: user.expiresAt?.toISOString() ?? null,
+    effectiveStatus,
     mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),

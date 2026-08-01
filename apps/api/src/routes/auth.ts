@@ -28,6 +28,9 @@ export async function authRoutes(app: FastifyInstance) {
       if (user.status !== "ACTIVE") {
         throw new AppError(403, "ACCOUNT_DISABLED", "This account has been disabled.");
       }
+      if (user.expiresAt && user.expiresAt <= new Date()) {
+        throw new AppError(403, "ACCOUNT_EXPIRED", "This account has expired. Contact an administrator.");
+      }
       await createSession(user.id, reply);
       return { user: serializeUser(user) };
     },

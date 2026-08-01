@@ -266,10 +266,10 @@ function ModelSettings() {
                   (model.selected
                     ? "border-blue-300 bg-blue-50/70"
                     : "border-slate-200 hover:border-slate-300 hover:bg-slate-50") +
-                  (!model.available ? " cursor-not-allowed opacity-50" : "")
+                  (!model.available || model.locked ? " cursor-not-allowed opacity-60" : "")
                 }
                 onClick={() => select.mutate({ source: "SERVER", profileId: model.id })}
-                disabled={!model.available || select.isPending}
+                disabled={!model.available || model.locked || select.isPending}
               >
                 <span className={
                   "grid h-5 w-5 shrink-0 place-items-center rounded-full border " +
@@ -281,6 +281,7 @@ function ModelSettings() {
                   <span className="block font-semibold text-slate-900">{model.label}</span>
                   <span className="mt-0.5 block truncate text-xs text-slate-500">{model.model}</span>
                 </span>
+                {model.locked && <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase text-violet-700">Full demo</span>}
                 {!model.available && <span className="text-[10px] font-bold uppercase text-slate-400">Not configured</span>}
               </button>
             ))}

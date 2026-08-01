@@ -56,12 +56,13 @@ Shared profiles are defined in MODEL_PROFILES_JSON. Keys remain separate environ
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "baseUrl": "https://api.groq.com/openai/v1",
-    "apiKeyEnv": "GROQ_API_KEY"
+    "apiKeyEnv": "GROQ_API_KEY",
+    "requiredAccessTier": "LIMITED"
   }
 ]
 ~~~
 
-Supported shared provider values are groq and openai-compatible. Only administrators can change this server configuration. Users can add Gemini keys in Settings; keys are validated before storage, encrypted with AES-256-GCM, and never returned to the browser.
+Supported shared provider values are groq and openai-compatible. Profiles marked `FULL_DEMO` are locked for limited accounts; the default profile must remain available to `LIMITED` accounts. Personal Gemini keys always remain usable by their owner regardless of tier. Only administrators can change shared server configuration.
 
 ## API surface
 
@@ -79,7 +80,7 @@ All application endpoints use /api and return errors as:
 - Authentication/account: /api/auth/login, /api/auth/logout, /api/auth/me, /api/account, /api/account/change-password
 - Scans: /api/scans, /api/scans/:id, /api/scans/:id/export
 - Models and credentials: /api/models, /api/model-preference, /api/credentials, /api/credentials/:id/models
-- Administration: /api/admin/users, /api/admin/users/:id, /api/admin/users/:id/reset-password
+- Administration: /api/admin/users, /api/admin/users/batch, /api/admin/users/batch-actions, /api/admin/users/:id, /api/admin/users/:id/reset-password
 
 State-changing requests from browsers are origin-checked. The frontend authenticates through a secure HTTP-only cookie; no database or shared provider key is exposed to client code.
 
@@ -112,5 +113,8 @@ npm run verify:provider
 - Findings include fixed-scale story-point estimates, safe Markdown instructions, and optional read-only replacement code. Legacy findings are normalized when read.
 - The report viewer supports severity and effort filters, deterministic sorting, history expansion, and versioned JSON copy/download. Exports always contain the complete canonical fix queue, independent of UI filters.
 - User queries are ownership-scoped. Administrator routes enforce roles and preserve at least one active administrator.
+- Security roles (`ADMIN`/`USER`) are separate from model access (`FULL_DEMO`/`LIMITED`). New accounts default to limited access while migrated accounts retain full access.
+- Optional account expiry blocks new logins but does not terminate an existing session. Manual disable revokes sessions immediately; re-enable does not clear expiry.
+- Batch registration accepts up to 200 CSV rows, reports row-level failures, and returns generated temporary passwords only in the initial response.
 - Session tokens are random, stored only as SHA-256 hashes, and rotated after password changes.
 - Provider responses are schema-validated and receive at most one repair attempt.

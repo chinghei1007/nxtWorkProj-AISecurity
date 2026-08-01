@@ -104,7 +104,9 @@ export function AppShell() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">{user.username}</p>
-            <p className="text-xs capitalize text-slate-400">{user.role.toLowerCase()}</p>
+            <p className="text-xs capitalize text-slate-400">
+              {user.role.toLowerCase()} · {user.accessTier === "FULL_DEMO" ? "full demo" : "limited"}
+            </p>
           </div>
           <button
             onClick={() => logout.mutate()}

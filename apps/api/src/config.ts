@@ -20,6 +20,7 @@ const modelProfileSchema = z.object({
   model: z.string().min(1),
   baseUrl: z.string().url(),
   apiKeyEnv: z.string().min(1),
+  requiredAccessTier: z.enum(["FULL_DEMO", "LIMITED"]).default("LIMITED"),
 });
 
 export type ModelProfile = z.infer<typeof modelProfileSchema>;
@@ -32,6 +33,7 @@ const defaultProfiles: ModelProfile[] = [
     model: "openai/gpt-oss-120b",
     baseUrl: "https://api.groq.com/openai/v1",
     apiKeyEnv: "GROQ_API_KEY",
+    requiredAccessTier: "LIMITED",
   },
 ];
 
@@ -60,6 +62,11 @@ const modelProfiles = parseProfiles(parsed.MODEL_PROFILES_JSON);
 
 if (!modelProfiles.some((profile) => profile.id === parsed.DEFAULT_MODEL_PROFILE_ID)) {
   throw new Error("DEFAULT_MODEL_PROFILE_ID does not match a configured model profile.");
+}
+
+const defaultProfile = modelProfiles.find((profile) => profile.id === parsed.DEFAULT_MODEL_PROFILE_ID)!;
+if (defaultProfile.requiredAccessTier !== "LIMITED") {
+  throw new Error("DEFAULT_MODEL_PROFILE_ID must reference a profile available to LIMITED accounts.");
 }
 
 if (parsed.NODE_ENV === "production" && !parsed.CREDENTIAL_ENCRYPTION_KEY) {

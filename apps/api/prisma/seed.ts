@@ -31,11 +31,17 @@ try {
         usernameNormalized: username.toLowerCase(),
         passwordHash: await argon2.hash(password, { type: argon2.argon2id }),
         role: "ADMIN",
+        accessTier: "FULL_DEMO",
+        expiresAt: null,
         mustChangePassword: true,
       },
     });
     console.log(`Seeded administrator: ${username}`);
   } else {
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { role: "ADMIN", status: "ACTIVE", accessTier: "FULL_DEMO", expiresAt: null },
+    });
     console.log(`Administrator already exists: ${username}`);
   }
 } finally {
