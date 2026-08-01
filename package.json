@@ -1,0 +1,28 @@
+{
+  "name": "ai-security-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w @secure-scan/api\" \"npm run dev -w @secure-scan/web\"",
+    "build": "npm run build -w @secure-scan/contracts && npm run build -w @secure-scan/api && npm run build -w @secure-scan/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test -w @secure-scan/api && npm run test -w @secure-scan/web",
+    "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
+    "db:seed": "npm run db:seed -w @secure-scan/api",
+    "db:studio": "npm run db:studio -w @secure-scan/api",
+    "verify:runtime": "npm run verify:runtime -w @secure-scan/api",
+    "verify:provider": "npm run verify:provider -w @secure-scan/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

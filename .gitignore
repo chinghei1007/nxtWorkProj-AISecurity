@@ -1,2 +1,12 @@
 .env
-__pycache__/aiResponse.cpython-314.pyc
+.env.*
+!.env.example
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+apps/api/prisma/dev.db*
+*.log
+__pycache__/
+.DS_Store
