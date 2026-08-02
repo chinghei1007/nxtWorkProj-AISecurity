@@ -24,11 +24,13 @@ const report: ScanExport = {
 describe("JsonReportViewer", () => {
   it("formats, copies, and links to the download export", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
+    const onDownload = vi.fn();
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-    render(<JsonReportViewer report={report} />);
+    render(<JsonReportViewer report={report} onDownload={onDownload} />);
     expect(screen.getByText(/"schemaVersion": "1.0"/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(report, null, 2)));
-    expect(screen.getByRole("link", { name: "Download" })).toHaveAttribute("href", "/api/scans/scan-1/export?download=1");
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    expect(onDownload).toHaveBeenCalledOnce();
   });
 });

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "exportedAt": "2026-08-02T08:00:00.000Z",
+  "scan": {
+    "id": "browser-fixture-scan",
+    "title": "Imported authentication review",
+    "createdAt": "2026-08-02T07:55:00.000Z",
+    "updatedAt": "2026-08-02T07:55:00.000Z",
+    "language": "typescript",
+    "sourceHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "codePreview": "const user = db.find(req.query.id);",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "summary": "The imported report contains one high-priority input-validation finding."
+  },
+  "fixQueue": [
+    {
+      "rank": 1,
+      "severity": "high",
+      "storyPoints": 3,
+      "title": "Unvalidated identifier reaches the data layer",
+      "location": {
+        "lineStart": 10,
+        "lineEnd": 10
+      },
+      "evidence": {
+        "code": "export async function handler(req) {\n  const user = db.find(req.query.id);\n  return user;\n}",
+        "startLine": 9,
+        "endLine": 12,
+        "highlightStartLine": 10,
+        "highlightEndLine": 10
+      },
+      "suggestedCode": "const id = idSchema.parse(req.query.id);\nconst user = db.find(id);",
+      "explanation": "The request parameter is forwarded without validation.",
+      "remediationSummary": "Validate and normalize the identifier before querying.",
+      "instructionsMarkdown": "## Suggested fix\n\n1. Define a strict identifier schema.\n2. Parse the request value before it reaches the data layer.\n3. Add rejection-path tests.\n\n```ts\nconst id = idSchema.parse(req.query.id);\n```"
+    }
+  ]
+}

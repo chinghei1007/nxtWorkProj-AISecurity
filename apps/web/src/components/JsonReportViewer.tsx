@@ -1,8 +1,9 @@
 import type { ScanExport } from "@secure-scan/contracts";
 import { Check, Copy, Download } from "lucide-react";
 import { useState } from "react";
+import { downloadReportValue } from "../lib/api";
 
-export function JsonReportViewer({ report }: { report: ScanExport }) {
+export function JsonReportViewer({ report, onDownload }: { report: ScanExport; onDownload?: () => void }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const formatted = JSON.stringify(report, null, 2);
 
@@ -28,9 +29,9 @@ export function JsonReportViewer({ report }: { report: ScanExport }) {
             {copyState === "copied" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copyState === "copied" ? "Copied" : "Copy"}
           </button>
-          <a href={`/api/scans/${report.scan.id}/export?download=1`} className="btn-primary">
+          <button type="button" onClick={onDownload ?? (() => downloadReportValue(`${report.scan.title}.json`, report))} className="btn-primary">
             <Download className="h-4 w-4" /> Download
-          </a>
+          </button>
         </div>
       </div>
       {copyState === "error" && <p role="alert" className="border-b border-red-200 bg-red-50 px-5 py-2 text-sm text-red-700">Clipboard access was unavailable. Select the JSON text to copy it manually.</p>}

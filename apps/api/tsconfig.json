@@ -1,11 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["node"]
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["@cloudflare/workers-types", "vitest/globals"]
   },
-  "include": ["src", "prisma", "test", "vitest.config.ts"]
+  "include": ["src", "test", "vitest.config.ts"]
 }

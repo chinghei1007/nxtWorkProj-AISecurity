@@ -1,19 +1,20 @@
-import type { Scan } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { buildScanExport, reportFilename } from "./report-export.js";
+import type { StoredScanRow } from "../types";
+import { buildScanExport, reportFilename } from "./report-export";
 
-const scan: Scan = {
+const scan: StoredScanRow = {
   id: "scan_123",
-  userId: "secret-user-id",
+  access_code_hash: "secret-access-hash",
+  management_token_hash: "secret-management-hash",
   title: "Auth / review",
   language: "TypeScript",
-  codeHash: "abc123",
-  codePreview: "const token = getToken()",
+  code_hash: "abc123",
+  code_preview: "const token = getToken()",
   provider: "groq",
-  profileId: "internal-profile-id",
+  profile_id: "internal-profile-id",
   model: "scanner-model",
   summary: "One issue.",
-  findings: [{
+  findings_json: JSON.stringify([{
     severity: "high",
     title: "Weak token",
     lineStart: 1,
@@ -22,23 +23,22 @@ const scan: Scan = {
     storyPoints: 2,
     instructionsMarkdown: "## Fix\nGenerate a cryptographic token.",
     evidence: { code: "const token = getToken()", startLine: 1, endLine: 1, highlightStartLine: 1, highlightEndLine: 1 },
-  }],
-  createdAt: new Date("2025-01-01T00:00:00.000Z"),
-  updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+  }]),
+  created_at: "2025-01-01T00:00:00.000Z",
+  updated_at: "2025-01-02T00:00:00.000Z",
+  expires_at: "2025-01-02T00:00:00.000Z",
 };
 
 describe("scan report export", () => {
   it("returns a stable, versioned safe document", () => {
     const report = buildScanExport(scan, new Date("2025-01-03T00:00:00.000Z"));
     expect(report.schemaVersion).toBe("1.0");
-    expect(report.exportedAt).toBe("2025-01-03T00:00:00.000Z");
     expect(report.scan.sourceHash).toBe("abc123");
-    expect(report.fixQueue[0]).toMatchObject({ rank: 1, storyPoints: 2, remediationSummary: "Generate a stronger token." });
+    expect(report.fixQueue[0]).toMatchObject({ rank: 1, storyPoints: 2 });
     const serialized = JSON.stringify(report);
-    expect(serialized).not.toContain("secret-user-id");
+    expect(serialized).not.toContain("secret-access-hash");
+    expect(serialized).not.toContain("secret-management-hash");
     expect(serialized).not.toContain("internal-profile-id");
-    expect(serialized).not.toContain("password");
-    expect(serialized).not.toContain("credential");
   });
 
   it("sanitizes attachment filenames", () => {

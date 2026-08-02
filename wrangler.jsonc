@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sentinel-anonymous-scanner",
+  "main": "apps/api/src/worker.ts",
+  "compatibility_date": "2026-08-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sentinel-scans",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "preview_database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "apps/api/migrations"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "SHARED_SCAN_RATE_LIMITER",
+      "namespace_id": "11001",
+      "simple": { "limit": 3, "period": 60 }
+    },
+    {
+      "name": "BYOK_SCAN_RATE_LIMITER",
+      "namespace_id": "11002",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "RESOLVE_RATE_LIMITER",
+      "namespace_id": "11003",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "vars": {
+    "DEFAULT_MODEL_PROFILE_ID": "groq-default",
+    "SHARED_SCAN_DAILY_CAP": "100"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "invocation_logs": true }
+  }
+}

@@ -1,11 +1,14 @@
 .env
 .env.*
 !.env.example
+.dev.vars
+!.dev.vars.example
 node_modules/
 dist/
 coverage/
 playwright-report/
 test-results/
+.wrangler/
 apps/api/prisma/dev.db*
 *.log
 __pycache__/

@@ -1,0 +1,4 @@
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+TURNSTILE_EXPECTED_HOSTNAME=localhost
+GROQ_API_KEY=replace-me
+MODEL_PROFILES_JSON=[{"id":"groq-default","label":"Groq · GPT OSS 120B","provider":"groq","model":"openai/gpt-oss-120b","baseUrl":"https://api.groq.com/openai/v1","apiKeyEnv":"GROQ_API_KEY"}]

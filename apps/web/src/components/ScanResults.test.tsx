@@ -29,6 +29,7 @@ describe("ScanResults", () => {
           ],
           createdAt: new Date(0).toISOString(),
           updatedAt: new Date(0).toISOString(),
+          expiresAt: new Date(86_400_000).toISOString(),
         }}
       />,
     );

@@ -4,36 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "dev": "wrangler dev --config ../../wrangler.jsonc --port 8787",
+    "build": "wrangler deploy --dry-run --config ../../wrangler.jsonc --outdir dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "verify:runtime": "tsx scripts/runtime-verify.ts",
-    "verify:provider": "tsx scripts/provider-smoke.ts",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "verify:provider": "vitest run src/services/provider.live.test.ts"
   },
   "dependencies": {
-    "@fastify/cookie": "^11.0.2",
-    "@fastify/cors": "^11.1.0",
-    "@fastify/rate-limit": "^10.3.0",
-    "@fastify/static": "^10.1.2",
-    "@google/genai": "^1.17.0",
-    "@prisma/client": "^6.15.0",
     "@secure-scan/contracts": "*",
-    "argon2": "^0.44.0",
-    "dotenv": "^17.2.1",
-    "fastify": "^5.6.0",
-    "openai": "^5.20.2",
+    "hono": "^4.9.6",
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@types/node": "^22.18.0",
-    "prisma": "^6.15.0",
-    "tsx": "^4.20.5",
+    "@cloudflare/workers-types": "^4.20250726.0",
     "vitest": "^3.2.4"
   }
 }

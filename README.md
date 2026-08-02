@@ -1,52 +1,35 @@
-# Sentinel AI Security Scanner
+# Sentinel Anonymous Security Scanner — Cloudflare D1 branch
 
-Sentinel is a private, multi-user code-security scanner. It validates that a submission resembles source code, sends accepted source to the selected AI provider for static analysis, and stores structured findings without retaining the full source.
+This branch (`codex/cloudflare-d1-24h`) is the account-free Cloudflare edition of Sentinel. It serves the Vite/React SPA and a Hono Worker API from one origin, stores bounded report data in D1 for 24 hours, and lets visitors keep schema `1.0` JSON reports in their own browser.
 
-## Stack
+The local PostgreSQL/Docker edition remains on `master`. `docker-compose.yml` is deliberately unchanged here and is not used by this branch.
 
-- Vite, React, TypeScript, Tailwind CSS, Zustand, and TanStack Query
-- Fastify with HTTP-only database-backed sessions
-- PostgreSQL and Prisma migrations
-- Shared Zod contracts for frontend and API validation
-- Groq/OpenAI-compatible shared model profiles and encrypted user-owned Gemini keys
+## Data and security behavior
 
-## Local setup
+- Submitted source is capped at 50,000 characters, analyzed as untrusted text, never executed, and never stored in full.
+- Obvious prose is rejected before Turnstile or provider inference with `NOT_CODE`.
+- A successful scan receives a random, case-sensitive 12-character access code and a separate 256-bit management token. D1 stores only their SHA-256 hashes.
+- Access codes permit view/export. Management tokens permit rename/delete and are returned only when a scan is created.
+- Each D1 scan becomes unavailable exactly 24 hours after creation. A UTC cron runs every 15 minutes and physically deletes expired rows in bounded batches. Cloudflare's normal D1 recovery/time-travel facilities can retain deleted database history outside the application's access window.
+- Share links use `/open#AccessCode`; URL fragments do not reach the Worker, request logs, or referrers.
+- Personal Gemini keys live only in `sessionStorage` for the current tab. They are sent for validation/inference and never written to D1, IndexedDB, localStorage, logs, responses, or exports.
+- Recent scan capabilities are stored in IndexedDB. localStorage receives only a non-sensitive display index. Explicitly saved/imported reports remain in IndexedDB until the visitor deletes them.
 
-Prerequisites: Node.js 22+, npm, and Docker.
+## Local development
 
-1. Install dependencies:
+Prerequisites: Node.js 22+ and npm. Docker and PostgreSQL are not required.
 
-   ~~~powershell
-   npm install
-   ~~~
+~~~powershell
+npm install
+Copy-Item .dev.vars.example .dev.vars
+# Replace GROQ_API_KEY in .dev.vars with a development key.
+npm run db:migrate:local
+npm run dev
+~~~
 
-2. Merge the values from .env.example into .env. Keep existing provider keys. Generate a credential-encryption key with:
+Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` to Wrangler on port 8787. The checked-in public key and `.dev.vars.example` secret are Cloudflare's always-pass Turnstile test credentials and must not be used for production.
 
-   ~~~powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-   ~~~
-
-3. Start PostgreSQL, apply the committed migration, and seed the administrator:
-
-   ~~~powershell
-   docker compose up -d postgres
-   npm run db:migrate
-   npm run db:seed
-   ~~~
-
-4. Start the API and web app:
-
-   ~~~powershell
-   npm run dev
-   ~~~
-
-Open [http://localhost:5173](http://localhost:5173). The initial local administrator is chinghei1007 with temporary password Oct0puspass. Sentinel requires a new 12-character password immediately after login.
-
-The existing local .env in this workspace has already been supplemented with the database URL and a randomly generated encryption key. It remains ignored by Git.
-
-## Model configuration
-
-Shared profiles are defined in MODEL_PROFILES_JSON. Keys remain separate environment variables:
+Shared profiles use `MODEL_PROFILES_JSON`. `baseUrl` is optional; Groq profiles default to `https://api.groq.com/openai/v1`, while other OpenAI-compatible profiles default to `https://api.openai.com/v1`.
 
 ~~~json
 [
@@ -55,34 +38,69 @@ Shared profiles are defined in MODEL_PROFILES_JSON. Keys remain separate environ
     "label": "Groq · GPT OSS 120B",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "baseUrl": "https://api.groq.com/openai/v1",
-    "apiKeyEnv": "GROQ_API_KEY",
-    "requiredAccessTier": "LIMITED"
+    "apiKeyEnv": "GROQ_API_KEY"
   }
 ]
 ~~~
 
-Supported shared provider values are groq and openai-compatible. Profiles marked `FULL_DEMO` are locked for limited accounts; the default profile must remain available to `LIMITED` accounts. Personal Gemini keys always remain usable by their owner regardless of tier. Only administrators can change shared server configuration.
+Every `apiKeyEnv` value names a Worker secret; it is not the secret itself.
+
+## Cloudflare provisioning and deployment
+
+1. Create production and preview D1 databases:
+
+   ~~~powershell
+   npx wrangler d1 create sentinel-scans
+   npx wrangler d1 create sentinel-scans-preview
+   ~~~
+
+2. Replace the placeholder `database_id` and `preview_database_id` values in `wrangler.jsonc` with the returned IDs. Keep the `DB` binding name.
+
+3. Configure production secrets. Add one secret for every `apiKeyEnv` referenced by `MODEL_PROFILES_JSON`:
+
+   ~~~powershell
+   npx wrangler secret put TURNSTILE_SECRET_KEY
+   npx wrangler secret put GROQ_API_KEY
+   ~~~
+
+4. Create a Turnstile widget for the production hostname. Set the public site key only for the frontend build, and set `TURNSTILE_EXPECTED_HOSTNAME` plus any custom `MODEL_PROFILES_JSON` values as non-secret Worker variables in `wrangler.jsonc` or the Cloudflare dashboard:
+
+   ~~~powershell
+   $env:VITE_TURNSTILE_SITE_KEY="your-public-site-key"
+   ~~~
+
+5. Apply the committed D1 migration and deploy the Worker plus static assets:
+
+   ~~~powershell
+   npm run db:migrate:remote
+   npm run deploy:dry-run
+   npm run deploy
+   ~~~
+
+The cron expression `*/15 * * * *`, SPA fallback, D1 binding, static assets, and Worker-first `/api/*` routing are committed in `wrangler.jsonc`. Cloudflare may take several minutes to propagate a newly changed Cron Trigger.
+
+## Abuse controls and quotas
+
+- Every scan requires server-side Turnstile Siteverify validation.
+- Shared-key scans: 3/minute/IP.
+- Personal Gemini (BYOK) scans: 10/minute/IP.
+- Access-code resolution: 30 attempts/minute/IP.
+- Shared models also use an atomic D1 daily cap, default 100 scans per UTC day. Change `SHARED_SCAN_DAILY_CAP` to configure it.
+
+Rate-limit bindings are defined in `wrangler.jsonc`. Namespace IDs must be unique within the Cloudflare account.
 
 ## API surface
 
-All application endpoints use /api and return errors as:
+All errors use `{ "error": { "code": "...", "message": "...", "fieldErrors": {} } }`.
 
-~~~json
-{
-  "error": {
-    "code": "NOT_CODE",
-    "message": "Does not seem like code."
-  }
-}
-~~~
+- `POST /api/scans` — source, title, Turnstile token, and model selection; returns the report and one-time capabilities.
+- `POST /api/scans/resolve` — resolves an unexpired access code.
+- `GET /api/scans/:id` and `GET /api/scans/:id/export` — require `X-Scan-Access-Code`.
+- `PATCH /api/scans/:id` and `DELETE /api/scans/:id` — require `X-Scan-Management-Token`.
+- `GET /api/models` — safe shared profile metadata only.
+- `POST /api/models/gemini` — validates a supplied personal key and lists compatible Gemini models.
 
-- Authentication/account: /api/auth/login, /api/auth/logout, /api/auth/me, /api/account, /api/account/change-password
-- Scans: /api/scans, /api/scans/:id, /api/scans/:id/export
-- Models and credentials: /api/models, /api/model-preference, /api/credentials, /api/credentials/:id/models
-- Administration: /api/admin/users, /api/admin/users/batch, /api/admin/users/batch-actions, /api/admin/users/:id, /api/admin/users/:id/reset-password
-
-State-changing requests from browsers are origin-checked. The frontend authenticates through a secure HTTP-only cookie; no database or shared provider key is exposed to client code.
+The export document remains schema `1.0` and contains no access codes, management tokens, Turnstile values, provider keys, full source, or internal configuration. JSON upload is read and validated entirely in the browser, limited to 5 MB, and deduplicated by the SHA-256 fingerprint of canonical JSON.
 
 ## Verification
 
@@ -90,31 +108,12 @@ State-changing requests from browsers are origin-checked. The frontend authentic
 npm run typecheck
 npm test
 npm run build
+npm run deploy:dry-run
 ~~~
 
-Runtime verification uses the isolated security_scanner_verify database:
+`npm run db:migrate:local` verifies the Wrangler migration against the local D1 database. Real provider verification requires the profile variables and key in the current process and consumes one provider request:
 
 ~~~powershell
-$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/security_scanner_verify?schema=public"
-npm run verify:runtime
-~~~
-
-An optional real-provider smoke test uses the configured default shared profile and consumes one provider request:
-
-~~~powershell
+$env:LIVE_PROVIDER_TEST="1"
 npm run verify:provider
 ~~~
-
-## Security and data behavior
-
-- Submitted source is capped at 50,000 characters, never executed, and excluded from request logs.
-- Obvious prose is rejected before a provider request.
-- Successful history records include a SHA-256 hash, a 160-character preview, model metadata, summary, rich remediation findings, and bounded affected snippets—not the full source.
-- Findings include fixed-scale story-point estimates, safe Markdown instructions, and optional read-only replacement code. Legacy findings are normalized when read.
-- The report viewer supports severity and effort filters, deterministic sorting, history expansion, and versioned JSON copy/download. Exports always contain the complete canonical fix queue, independent of UI filters.
-- User queries are ownership-scoped. Administrator routes enforce roles and preserve at least one active administrator.
-- Security roles (`ADMIN`/`USER`) are separate from model access (`FULL_DEMO`/`LIMITED`). New accounts default to limited access while migrated accounts retain full access.
-- Optional account expiry blocks new logins but does not terminate an existing session. Manual disable revokes sessions immediately; re-enable does not clear expiry.
-- Batch registration accepts up to 200 CSV rows, reports row-level failures, and returns generated temporary passwords only in the initial response.
-- Session tokens are random, stored only as SHA-256 hashes, and rotated after password changes.
-- Provider responses are schema-validated and receive at most one repair attempt.
