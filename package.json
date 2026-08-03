@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n worker,web -c blue,magenta \"npm run dev -w @secure-scan/api\" \"npm run dev -w @secure-scan/web\"",
-    "build": "npm run build -w @secure-scan/contracts && npm run build -w @secure-scan/web && npm run build -w @secure-scan/api",
+    "build": "npm run build -w @secure-scan/web && npm run build -w @secure-scan/contracts && npm run build -w @secure-scan/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test -w @secure-scan/api && npm run test -w @secure-scan/web",
     "verify:provider": "npm run verify:provider -w @secure-scan/api",
