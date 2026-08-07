@@ -4,10 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#101828",
+        ink: "#2a4147",
         navy: "#0d1b2a",
         panel: "#f8fafc",
-        accent: "#2563eb",
+        accent: "#72b6d6",
       },
       boxShadow: {
         soft: "0 12px 32px rgba(15, 23, 42, 0.08)",
