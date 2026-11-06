@@ -14,8 +14,8 @@
     {
       "binding": "DB",
       "database_name": "sentinel-scans",
-      "database_id": "00000000-0000-0000-0000-000000000000",
-      "preview_database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "6e32800f-84cf-4caf-8c41-1d2bec7c00a8",
+      "preview_database_id": "aa20ee88-9892-4489-8540-193d8e59930b",
       "migrations_dir": "apps/api/migrations"
     }
   ],
