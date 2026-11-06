@@ -50,14 +50,14 @@ Every `apiKeyEnv` value names a Worker secret; it is not the secret itself.
 
 ## Cloudflare provisioning and deployment
 
-1. Create production and preview D1 databases:
+1. This repository already contains production and preview D1 IDs. To set up a different Cloudflare account, create production and preview D1 databases:
 
    ~~~powershell
-   npx wrangler d1 create sentinel-scans
-   npx wrangler d1 create sentinel-scans-preview
+   npx wrangler d1 create aisecurity
+   npx wrangler d1 create aisecurity-preview
    ~~~
 
-2. Replace the placeholder `database_id` and `preview_database_id` values in `wrangler.jsonc` with the returned IDs. Keep the `DB` binding name.
+2. For a different account, replace the `database_id` and `preview_database_id` values in `wrangler.jsonc` with the new IDs. Keep the `DB` binding name.
 
 3. Configure production secrets. For the single-model setup, enter the key when prompted; do not paste it into the command or commit it:
 
@@ -74,13 +74,31 @@ Every `apiKeyEnv` value names a Worker secret; it is not the secret itself.
    $env:VITE_TURNSTILE_SITE_KEY="your-public-site-key"
    ~~~
 
-5. Apply the committed D1 migration and deploy the Worker plus static assets:
+5. When setting up a new database, apply the migration separately with `npm run db:migrate:remote`. The deploy scripts do not change the database schema.
 
-   ~~~powershell
-   npm run db:migrate:remote
-   npm run deploy:dry-run
-   npm run deploy
-   ~~~
+### Deploy from your computer
+
+Use Node.js 22 or newer and npm. Run the commands from the repository root on the Cloudflare branch. Install dependencies with `npm ci` if needed, and authenticate Wrangler to the correct Cloudflare account with `npx wrangler login` if necessary.
+
+For production, make the **public** Turnstile site key available while the site is built. It is not the secret key, and a Worker runtime variable in the Cloudflare dashboard does not automatically supply it to a build on your computer. Without it, the frontend uses the always-pass test key.
+
+macOS / Linux:
+
+~~~sh
+export VITE_TURNSTILE_SITE_KEY="your-production-public-site-key"
+npm run deploy:dry-run  # optional: build and validate without deploying
+npm run deploy          # build and deploy to Cloudflare
+~~~
+
+Windows Command Prompt:
+
+~~~cmd
+set "VITE_TURNSTILE_SITE_KEY=your-production-public-site-key"
+npm run deploy:dry-run
+npm run deploy
+~~~
+
+The deploy commands use `wrangler deploy --keep-vars` to retain variables added in the Cloudflare dashboard. Wrangler configuration values can still override variables with the same names; Worker secrets are preserved. The commands do not push Git changes. If your Worker uses Cloudflare's Git integration, check its Builds and Deployments page after a push before running a manual deployment, to avoid deploying twice.
 
 The cron expression `*/15 * * * *`, SPA fallback, D1 binding, static assets, and Worker-first `/api/*` routing are committed in `wrangler.jsonc`. Cloudflare may take several minutes to propagate a newly changed Cron Trigger.
 

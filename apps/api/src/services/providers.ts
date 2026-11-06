@@ -44,6 +44,26 @@ async function providerFetch(url: string, init: RequestInit) {
   }
 }
 
+export async function testModel(input: { apiKey: string; model: string; message: string; baseUrl?: string }) {
+  const gemini = !input.baseUrl;
+  const response = await providerFetch(gemini
+    ? `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(input.model)}:generateContent`
+    : input.baseUrl!.replace(/\/$/, "") + "/chat/completions", {
+    method: "POST",
+    headers: gemini
+      ? { "Content-Type": "application/json", "x-goog-api-key": input.apiKey }
+      : { "Content-Type": "application/json", Authorization: `Bearer ${input.apiKey}` },
+    body: JSON.stringify(gemini
+      ? { contents: [{ role: "user", parts: [{ text: input.message }] }], generationConfig: { maxOutputTokens: 256 } }
+      : { model: input.model, messages: [{ role: "user", content: input.message }], max_tokens: 256 }),
+  });
+  if (!response.ok) throw new AppError(502, "PROVIDER_ERROR", `The model provider returned HTTP ${response.status}. Check the model and provider settings.`);
+  const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }>; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const reply = gemini ? payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") : payload.choices?.[0]?.message?.content;
+  if (!reply) throw new AppError(502, "PROVIDER_ERROR", "The model returned an empty response.");
+  return reply;
+}
+
 export async function auditWithOpenAICompatible(input: {
   apiKey: string;
   baseUrl: string;

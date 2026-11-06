@@ -12,10 +12,10 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test -w @secure-scan/api && npm run test -w @secure-scan/web",
     "verify:provider": "npm run verify:provider -w @secure-scan/api",
-    "db:migrate:local": "wrangler d1 migrations apply sentinel-scans --local",
-    "db:migrate:remote": "wrangler d1 migrations apply sentinel-scans --remote",
-    "deploy": "npm run build && wrangler deploy",
-    "deploy:dry-run": "npm run build && wrangler deploy --dry-run"
+    "db:migrate:local": "wrangler d1 migrations apply aisecurity --local",
+    "db:migrate:remote": "wrangler d1 migrations apply aisecurity --remote",
+    "deploy": "npm run build && wrangler deploy --keep-vars",
+    "deploy:dry-run": "npm run build && wrangler deploy --keep-vars --dry-run"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

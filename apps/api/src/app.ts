@@ -5,13 +5,14 @@ import {
   validateGeminiKeyInputSchema,
 } from "@secure-scan/contracts";
 import { Hono } from "hono";
+import { z } from "zod";
 import { defaultProfileId, modelProfiles, profileBaseUrl, profileSecret, sharedDailyCap } from "./config";
 import { sha256 } from "./lib/capabilities";
 import { detectLanguage, looksLikeCode } from "./lib/code-gate";
 import { AppError, errorPayload } from "./lib/errors";
 import { enrichFindingsWithEvidence } from "./lib/findings";
 import { buildScanExport, reportFilename } from "./lib/report-export";
-import { auditWithGemini, auditWithOpenAICompatible, listGeminiModels } from "./services/providers";
+import { auditWithGemini, auditWithOpenAICompatible, listGeminiModels, testModel } from "./services/providers";
 import {
   consumeSharedQuota,
   deleteScan,
@@ -77,6 +78,31 @@ app.post("/api/models/gemini", async (c) => {
   if (!limited.success) throw new AppError(429, "RATE_LIMITED", "Too many model requests. Try again shortly.");
   const input = validateGeminiKeyInputSchema.parse(await requestJson(c));
   return c.json({ models: await listGeminiModels(input.apiKey) });
+});
+
+app.post("/api/models/test", async (c) => {
+  const input = z.object({
+    message: z.string().trim().min(1).max(2000),
+    turnstileToken: z.string().min(1).max(4096),
+    selection: z.discriminatedUnion("source", [
+      z.object({ source: z.literal("SERVER"), profileId: z.string().min(1).max(80) }),
+      z.object({ source: z.literal("USER"), provider: z.literal("gemini"), model: z.string().min(1).max(160), apiKey: z.string().min(1).max(512) }),
+    ]),
+  }).parse(await requestJson(c));
+  const ip = c.req.header("cf-connecting-ip") || "local";
+  const limiter = input.selection.source === "SERVER" ? c.env.SHARED_SCAN_RATE_LIMITER : c.env.BYOK_SCAN_RATE_LIMITER;
+  if (!(await limiter.limit({ key: `scan:${ip}` })).success) throw new AppError(429, "RATE_LIMITED", "Too many requests. Try again shortly.");
+  await validateTurnstile(c.env, input.turnstileToken, ip === "local" ? undefined : ip);
+  if (input.selection.source === "USER") {
+    return c.json({ reply: await testModel({ ...input.selection, message: input.message }) });
+  }
+  const profileId = input.selection.profileId;
+  const profile = modelProfiles(c.env).find((candidate) => candidate.id === profileId);
+  if (!profile) throw new AppError(400, "MODEL_NOT_FOUND", "The selected model is unavailable.");
+  const apiKey = profileSecret(c.env, profile);
+  if (!apiKey) throw new AppError(503, "MODEL_UNAVAILABLE", "The selected model is not configured.");
+  await consumeSharedQuota(c.env, sharedDailyCap(c.env));
+  return c.json({ reply: await testModel({ apiKey, model: profile.model, baseUrl: profileBaseUrl(profile), message: input.message }) });
 });
 
 app.post("/api/scans", async (c) => {

@@ -1,50 +1,80 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nxtworkproj-aisecurity",
-  "main": "apps/api/src/worker.ts",
-  "compatibility_date": "2026-08-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": "apps/web/dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "sentinel-scans",
-      "database_id": "6e32800f-84cf-4caf-8c41-1d2bec7c00a8",
-      "preview_database_id": "aa20ee88-9892-4489-8540-193d8e59930b",
-      "migrations_dir": "apps/api/migrations"
-    }
-  ],
-  "ratelimits": [
-    {
-      "name": "SHARED_SCAN_RATE_LIMITER",
-      "namespace_id": "11001",
-      "simple": { "limit": 3, "period": 60 }
-    },
-    {
-      "name": "BYOK_SCAN_RATE_LIMITER",
-      "namespace_id": "11002",
-      "simple": { "limit": 10, "period": 60 }
-    },
-    {
-      "name": "RESOLVE_RATE_LIMITER",
-      "namespace_id": "11003",
-      "simple": { "limit": 30, "period": 60 }
-    }
-  ],
-  "triggers": {
-    "crons": ["*/15 * * * *"]
-  },
-  "vars": {
-    "DEFAULT_MODEL_PROFILE_ID": "groq-default",
-    "SHARED_SCAN_DAILY_CAP": "100"
-  },
-  "observability": {
-    "enabled": true,
-    "logs": { "invocation_logs": true }
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "nxtworkproj-aisecurity",
+	"main": "apps/api/src/worker.ts",
+	"compatibility_date": "2026-08-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "apps/web/dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "aisecurity",
+			"database_id": "6e32800f-84cf-4caf-8c41-1d2bec7c00a8",
+			"preview_database_id": "aa20ee88-9892-4489-8540-193d8e59930b",
+			"migrations_dir": "apps/api/migrations"
+		}
+	],
+	"ratelimits": [
+		{
+			"name": "SHARED_SCAN_RATE_LIMITER",
+			"namespace_id": "11001",
+			"simple": {
+				"limit": 3,
+				"period": 60
+			}
+		},
+		{
+			"name": "BYOK_SCAN_RATE_LIMITER",
+			"namespace_id": "11002",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		},
+		{
+			"name": "RESOLVE_RATE_LIMITER",
+			"namespace_id": "11003",
+			"simple": {
+				"limit": 30,
+				"period": 60
+			}
+		}
+	],
+	"triggers": {
+		"crons": [
+			"*/15 * * * *"
+		]
+	},
+	"vars": {
+		"DEFAULT_MODEL_PROFILE_ID": "groq-default",
+		"SHARED_SCAN_DAILY_CAP": "100",
+		"SHARED_MODEL_BASE_URL": "https://api.cohere.ai/compatibility/v1",
+		"SHARED_MODEL_ID": "command-a-plus-05-2026",
+		"SHARED_MODEL_NAME": "Cohere Command A+"
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"invocation_logs": true
+		},
+		"redact_query_string": false
+	},
+	"routes": [
+		{
+			"pattern": "securityproj.heison1007.dpdns.org",
+			"zone_name": "heison1007.dpdns.org",
+			"custom_domain": true,
+			"enabled": true,
+			"previews_enabled": false
+		}
+	]
 }

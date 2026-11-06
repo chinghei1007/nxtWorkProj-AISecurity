@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Check, KeyRound, Server, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { InlineAlert } from "../components/InlineAlert";
 import { PageHeader } from "../components/PageHeader";
 import { api, messageFrom } from "../lib/api";
@@ -12,6 +13,10 @@ export function SettingsPage() {
   const setSelection = useModelStore((state) => state.setSelection);
   const [apiKey, setApiKey] = useState(readSessionGeminiKey);
   const [modelsForKey, setModelsForKey] = useState<GeminiModelsPayload["models"]>([]);
+  const [message, setMessage] = useState("");
+  const [token, setToken] = useState("");
+  const [reply, setReply] = useState("");
+  const turnstile = useRef<TurnstileInstance>(null);
   const models = useQuery({ queryKey: ["models"], queryFn: () => api<ModelsPayload>("/api/models") });
   const validate = useMutation({
     mutationFn: () => api<GeminiModelsPayload>("/api/models/gemini", {
@@ -22,6 +27,14 @@ export function SettingsPage() {
       writeSessionGeminiKey(apiKey);
       setModelsForKey(payload.models);
     },
+  });
+  const test = useMutation({
+    mutationFn: () => api<{ reply: string }>("/api/models/test", {
+      method: "POST",
+      body: JSON.stringify({ message, turnstileToken: token, selection: selection.source === "USER" ? { ...selection, apiKey: readSessionGeminiKey() } : selection }),
+    }),
+    onSuccess: (data) => setReply(data.reply),
+    onSettled: () => { setToken(""); turnstile.current?.reset(); },
   });
 
   return (
@@ -69,6 +82,18 @@ export function SettingsPage() {
           </form>
         </aside>
       </div>
+      <section className="card mt-5 p-5 sm:p-6">
+        <h2 className="font-bold text-slate-950">Test selected model</h2>
+        <p className="mt-1 text-sm text-slate-500">Send a short message to check whether the selected model responds. Shared model tests count toward the daily quota.</p>
+        <form className="mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); setReply(""); test.mutate(); }}>
+          <label className="label" htmlFor="model-test-message">Message</label>
+          <textarea id="model-test-message" className="input" rows={2} maxLength={2000} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Hello! Are you responding?" required />
+          <Turnstile ref={turnstile} siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"} onSuccess={setToken} onExpire={() => setToken("")} options={{ action: "scan", size: "flexible" }} />
+          {test.error && <InlineAlert>{messageFrom(test.error)}</InlineAlert>}
+          {reply && <div className="whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm text-slate-800" aria-live="polite">{reply}</div>}
+          <button className="btn-primary" disabled={test.isPending || !token || !message.trim()}>{test.isPending ? "Waiting…" : "Send test message"}</button>
+        </form>
+      </section>
     </div>
   );
 }
