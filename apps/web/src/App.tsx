@@ -11,7 +11,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage").then((module) => 
 
 export default function App() {
   return (
-    <Suspense fallback={<div className="grid min-h-screen place-items-center bg-slate-50 text-sm font-semibold text-slate-500">Loading Sentinel…</div>}>
+    <Suspense fallback={<div className="grid min-h-screen place-items-center bg-slate-50 text-sm font-semibold text-slate-500">Loading AI Security Check…</div>}>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/scan" element={<ScanPage />} />

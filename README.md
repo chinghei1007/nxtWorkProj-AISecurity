@@ -22,14 +22,17 @@ Prerequisites: Node.js 22+ and npm. Docker and PostgreSQL are not required.
 ~~~powershell
 npm install
 Copy-Item .dev.vars.example .dev.vars
-# Replace GROQ_API_KEY in .dev.vars with a development key.
+# Set SHARED_MODEL_API_KEY, SHARED_MODEL_ID, SHARED_MODEL_NAME, and
+# SHARED_MODEL_BASE_URL in .dev.vars for your provider.
 npm run db:migrate:local
 npm run dev
 ~~~
 
 Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` to Wrangler on port 8787. The checked-in public key and `.dev.vars.example` secret are Cloudflare's always-pass Turnstile test credentials and must not be used for production.
 
-Shared profiles use `MODEL_PROFILES_JSON`. `baseUrl` is optional; Groq profiles default to `https://api.groq.com/openai/v1`, while other OpenAI-compatible profiles default to `https://api.openai.com/v1`.
+For a single shared model, set `SHARED_MODEL_ID` to the provider's model ID, `SHARED_MODEL_NAME` to the name shown in the UI, and `SHARED_MODEL_BASE_URL` to the provider's OpenAI-compatible API base URL (for example `https://api.openai.com/v1`). Store `SHARED_MODEL_API_KEY` as a Worker secret, not a public variable. The key is sent to the configured provider, so use only a trusted HTTPS endpoint. If these settings are absent, the previous Groq defaults and `GROQ_API_KEY` continue to work. The API key and base URL are not returned to browsers.
+
+For multiple shared profiles, use `MODEL_PROFILES_JSON` instead. When present, it takes precedence over all four single-model settings. `baseUrl` is optional; Groq profiles default to `https://api.groq.com/openai/v1`, while other OpenAI-compatible profiles default to `https://api.openai.com/v1`.
 
 ~~~json
 [
@@ -56,14 +59,16 @@ Every `apiKeyEnv` value names a Worker secret; it is not the secret itself.
 
 2. Replace the placeholder `database_id` and `preview_database_id` values in `wrangler.jsonc` with the returned IDs. Keep the `DB` binding name.
 
-3. Configure production secrets. Add one secret for every `apiKeyEnv` referenced by `MODEL_PROFILES_JSON`:
+3. Configure production secrets. For the single-model setup, enter the key when prompted; do not paste it into the command or commit it:
 
    ~~~powershell
    npx wrangler secret put TURNSTILE_SECRET_KEY
-   npx wrangler secret put GROQ_API_KEY
+   npx wrangler secret put SHARED_MODEL_API_KEY
    ~~~
 
-4. Create a Turnstile widget for the production hostname. Set the public site key only for the frontend build, and set `TURNSTILE_EXPECTED_HOSTNAME` plus any custom `MODEL_PROFILES_JSON` values as non-secret Worker variables in `wrangler.jsonc` or the Cloudflare dashboard:
+   For `MODEL_PROFILES_JSON`, instead add a secret for each `apiKeyEnv` it references. To rotate a key, run the corresponding `wrangler secret put` command again. The command updates the deployed Worker secret; local development uses the ignored `.dev.vars` file.
+
+4. Create a Turnstile widget for the production hostname. Set `SHARED_MODEL_ID`, `SHARED_MODEL_NAME`, `SHARED_MODEL_BASE_URL`, and `TURNSTILE_EXPECTED_HOSTNAME` as non-secret Worker variables in `wrangler.jsonc` or the Cloudflare dashboard. Set the public site key only for the frontend build:
 
    ~~~powershell
    $env:VITE_TURNSTILE_SITE_KEY="your-public-site-key"

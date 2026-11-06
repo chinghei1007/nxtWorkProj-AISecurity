@@ -12,19 +12,19 @@ const modelProfileSchema = z.object({
 
 export type ModelProfile = z.infer<typeof modelProfileSchema>;
 
-const fallbackProfiles: ModelProfile[] = [{
-  id: "groq-default",
-  label: "Groq · GPT OSS 120B",
-  provider: "groq",
-  model: "openai/gpt-oss-120b",
-  baseUrl: "https://api.groq.com/openai/v1",
-  apiKeyEnv: "GROQ_API_KEY",
-}];
-
 export function modelProfiles(env: Env): ModelProfile[] {
   const parsed = env.MODEL_PROFILES_JSON
     ? z.array(modelProfileSchema).min(1).parse(JSON.parse(env.MODEL_PROFILES_JSON))
-    : fallbackProfiles;
+    : [modelProfileSchema.parse({
+        id: "groq-default",
+        label: env.SHARED_MODEL_NAME || "Groq · GPT OSS 120B",
+        provider: "openai-compatible",
+        model: env.SHARED_MODEL_ID || "openai/gpt-oss-120b",
+        baseUrl: env.SHARED_MODEL_BASE_URL || "https://api.groq.com/openai/v1",
+        apiKeyEnv: env.SHARED_MODEL_API_KEY || env.SHARED_MODEL_ID || env.SHARED_MODEL_NAME || env.SHARED_MODEL_BASE_URL
+          ? "SHARED_MODEL_API_KEY"
+          : "GROQ_API_KEY",
+      })];
   if (new Set(parsed.map((profile) => profile.id)).size !== parsed.length) {
     throw new Error("MODEL_PROFILES_JSON contains duplicate IDs.");
   }

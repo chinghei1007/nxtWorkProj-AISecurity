@@ -8,6 +8,10 @@ export interface Env {
   TURNSTILE_EXPECTED_HOSTNAME?: string;
   DEFAULT_MODEL_PROFILE_ID?: string;
   MODEL_PROFILES_JSON?: string;
+  SHARED_MODEL_NAME?: string;
+  SHARED_MODEL_ID?: string;
+  SHARED_MODEL_BASE_URL?: string;
+  SHARED_MODEL_API_KEY?: string;
   SHARED_SCAN_DAILY_CAP?: string;
   GROQ_API_KEY?: string;
 }

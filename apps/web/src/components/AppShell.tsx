@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Clock3, History, Menu, ScanLine, Settings, Shield, X } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { api } from "../lib/api";
@@ -7,9 +6,9 @@ import { useModelStore } from "../store/model";
 import type { ModelsPayload } from "../types";
 
 const navigation = [
-  { to: "/scan", label: "New scan", icon: ScanLine },
-  { to: "/history", label: "History & archive", icon: History },
-  { to: "/settings", label: "Models", icon: Settings },
+  { to: "/scan", label: "New scan" },
+  { to: "/history", label: "History & archive" },
+  { to: "/settings", label: "Models" },
 ];
 
 export function AppShell() {
@@ -17,54 +16,24 @@ export function AppShell() {
   const selection = useModelStore((state) => state.selection);
   const models = useQuery({ queryKey: ["models"], queryFn: () => api<ModelsPayload>("/api/models") });
   const activeModel = selection.source === "SERVER"
-    ? models.data?.models.find((model) => model.id === selection.profileId)
-    : { label: `Personal Gemini · ${selection.model}` };
-
-  const nav = (
-    <>
-      <div className="flex h-20 items-center justify-between px-5">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500 text-white"><Shield className="h-5 w-5" /></div>
-          <div>
-            <p className="font-bold tracking-tight text-white">Sentinel</p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Anonymous scan</p>
-          </div>
-        </div>
-        <button className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X className="h-5 w-5" /></button>
-      </div>
-      <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary navigation">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className={({ isActive }) =>
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition " +
-              (isActive ? "bg-blue-500 text-white shadow-lg shadow-blue-950/20" : "text-slate-300 hover:bg-white/10 hover:text-white")
-            }>
-              <Icon className="h-4 w-4" />{item.label}
-            </NavLink>
-          );
-        })}
-      </nav>
-      <div className="border-t border-white/10 p-4">
-        {activeModel && <div className="mb-3 rounded-xl bg-white/5 p-3"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active model</p><p className="mt-1 truncate text-xs font-medium text-slate-200">{activeModel.label}</p></div>}
-        <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-300/5 p-3 text-xs leading-5 text-amber-100">
-          <Clock3 className="mt-0.5 h-4 w-4 shrink-0" /> Server reports expire after 24 hours. Save JSON locally to keep one.
-        </div>
-      </div>
-    </>
-  );
+    ? models.data?.models.find((model) => model.id === selection.profileId)?.label
+    : `Personal Gemini · ${selection.model}`;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-navy lg:flex">{nav}</aside>
-      {mobileOpen && <div className="fixed inset-0 z-40 lg:hidden"><button className="absolute inset-0 bg-slate-950/50" onClick={() => setMobileOpen(false)} aria-label="Close navigation overlay" /><aside className="relative flex h-full w-72 flex-col bg-navy">{nav}</aside></div>}
-      <div className="lg:pl-64">
-        <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
-          <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-slate-200 p-2 text-slate-700" aria-label="Open navigation"><Menu className="h-5 w-5" /></button>
-          <span className="flex items-center gap-2 text-sm font-bold text-slate-900"><Shield className="h-4 w-4 text-blue-600" />Sentinel</span><span className="w-9" />
+    <div className="flex min-h-screen flex-col bg-white text-slate-900">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3">Skip to main content</a>
+      <header className="border-b border-orange-100 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <NavLink to="/scan" className="mr-auto text-lg font-bold text-stone-900">AI Security Check</NavLink>
+          <button type="button" className="rounded-md border border-orange-800 px-3 py-2 text-orange-900 md:hidden" aria-expanded={mobileOpen} aria-controls="primary-navigation" onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? "Close menu" : "Menu"}</button>
+          <nav id="primary-navigation" aria-label="Primary navigation" className={`${mobileOpen ? "flex" : "hidden"} w-full flex-col gap-1 md:flex md:w-auto md:flex-row md:items-center`}>
+            {navigation.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-800 ${isActive ? "bg-orange-800 text-white" : "text-stone-700 hover:bg-orange-50"}`}>{item.label}</NavLink>)}
+          </nav>
+          {activeModel && <span className="hidden max-w-48 truncate text-xs text-stone-600 lg:block" title={activeModel}>Active: {activeModel}</span>}
         </div>
-        <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9"><Outlet /></main>
-      </div>
+      </header>
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-7 sm:px-6 lg:px-8 lg:py-9"><Outlet /></main>
+      <footer className="border-t border-orange-100 px-4 py-5 text-sm text-stone-600"><div className="mx-auto max-w-7xl">AI Security Check · Server reports expire after 24 hours. Save JSON locally to keep one.</div></footer>
     </div>
   );
 }
